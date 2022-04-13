@@ -10,9 +10,9 @@ export class Item {
   }
 }
 
-export type ConjuredItem = Item & { conjured: true }
+type ConjuredItem = Item & { conjured: true }
 export class GildedRose {
-  items: Array<Item | ConjuredItem>
+  items: Array<Item>
 
   constructor(items = [] as Array<Item | ConjuredItem>) {
     this.items = items
@@ -79,12 +79,15 @@ function incrementQuality({ quality }: Readonly<Pick<Item, 'quality'>>): number 
   return quality + 1
 }
 
+function isConjured(item: Readonly<Item | ConjuredItem>): boolean {
+  return 'conjured' in item && item['conjured'] === true
+}
+
 function updateConjuredItemQuality(
   previousItem: Readonly<Item>,
   currentItem: Readonly<Item | ConjuredItem>
 ): number {
-  const isItemConjured = 'conjured' in currentItem && currentItem.conjured
-  if (!isItemConjured) return currentItem.quality
+  if (!isConjured(currentItem)) return currentItem.quality
   const diff = previousItem.quality - currentItem.quality
   if (diff >= 0) return currentItem.quality
 
