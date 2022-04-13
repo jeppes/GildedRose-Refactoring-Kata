@@ -79,7 +79,7 @@ test('acceptance tests', () => {
   }
 })
 
-function decayRate(previousValue: number, currentValue: number): number {
+function decayDiff(previousValue: number, currentValue: number): number {
   const diff = currentValue - previousValue
   return diff > 0 ? diff : 0
 }
@@ -93,11 +93,11 @@ test('"Conjured" items degrade in Quality twice as fast as normal items', () => 
 
         const conjuredQualityBefore = gildedRoseWithConjuredItems.items[0].quality
         const conjuredQualityAfter = gildedRoseWithConjuredItems.updateQuality()[0].quality
-        const conjuredQualityDecayRate = decayRate(conjuredQualityBefore, conjuredQualityAfter) 
+        const conjuredQualityDecayRate = decayDiff(conjuredQualityBefore, conjuredQualityAfter)
         
         const normalQualityBefore = gildedRoseWithNormalItems.items[0].quality
         const normalQualityAfter = gildedRoseWithNormalItems.updateQuality()[0].quality
-        const normalQualityDecayRate = decayRate(normalQualityBefore, normalQualityAfter)
+        const normalQualityDecayRate = decayDiff(normalQualityBefore, normalQualityAfter)
 
         expect(conjuredQualityDecayRate).toEqual(normalQualityDecayRate * 2)
       }
