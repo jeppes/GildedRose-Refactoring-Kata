@@ -1,69 +1,95 @@
 export class Item {
-  name: string;
-  sellIn: number;
-  quality: number;
+  name: string
+  sellIn: number
+  quality: number
 
   constructor(name, sellIn, quality) {
-    this.name = name;
-    this.sellIn = sellIn;
-    this.quality = quality;
+    this.name = name
+    this.sellIn = sellIn
+    this.quality = quality
   }
 }
 
+type ConjuredItem = Item & { conjured: true }
 export class GildedRose {
-  items: Array<Item>;
+  items: Array<Item>
 
-  constructor(items = [] as Array<Item>) {
-    this.items = items;
+  constructor(items = [] as Array<Item | ConjuredItem>) {
+    this.items = items
   }
 
   updateQuality() {
-    for (let i = 0; i < this.items.length; i++) {
-      if (this.items[i].name != 'Aged Brie' && this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-        if (this.items[i].quality > 0) {
-          if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-            this.items[i].quality = this.items[i].quality - 1
-          }
-        }
-      } else {
-        if (this.items[i].quality < 50) {
-          this.items[i].quality = this.items[i].quality + 1
-          if (this.items[i].name == 'Backstage passes to a TAFKAL80ETC concert') {
-            if (this.items[i].sellIn < 11) {
-              if (this.items[i].quality < 50) {
-                this.items[i].quality = this.items[i].quality + 1
-              }
-            }
-            if (this.items[i].sellIn < 6) {
-              if (this.items[i].quality < 50) {
-                this.items[i].quality = this.items[i].quality + 1
-              }
-            }
-          }
-        }
-      }
-      if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-        this.items[i].sellIn = this.items[i].sellIn - 1;
-      }
-      if (this.items[i].sellIn < 0) {
-        if (this.items[i].name != 'Aged Brie') {
-          if (this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-            if (this.items[i].quality > 0) {
-              if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                this.items[i].quality = this.items[i].quality - 1
-              }
-            }
-          } else {
-            this.items[i].quality = this.items[i].quality - this.items[i].quality
-          }
-        } else {
-          if (this.items[i].quality < 50) {
-            this.items[i].quality = this.items[i].quality + 1
-          }
-        }
-      }
-    }
-
-    return this.items;
+    this.items = [...updateItems(this.items)]
+    return this.items
   }
+}
+
+function updateItems(items: readonly Readonly<Item | ConjuredItem>[]): readonly Readonly<Item | ConjuredItem>[] {
+  return items 
+    .map(item => ({ ...item, quality: updateItemQuality(item) }))
+    .map(item => ({ ...item, sellIn: updateItemSellIn(item) }))
+    .map(item => ({ ...item, quality: updateExpiredItemQuality(item) }))
+    .map((item, i) => {
+      const previousItem = items[i]
+      return ({ ...item, quality: updateConjuredItemQuality(previousItem, item) })
+    })
+}
+
+function updateItemQuality({ name, quality, sellIn, ...rest }: Readonly<Item>): number {
+  switch (name) {
+    case 'Sulfuras, Hand of Ragnaros': return quality
+    case 'Aged Brie': return incrementQuality({ quality });
+    case 'Backstage passes to a TAFKAL80ETC concert': {
+      let itemCopy = { name, quality, sellIn, ...rest }
+      itemCopy.quality = incrementQuality(itemCopy);
+      if (sellIn < 11) itemCopy.quality = incrementQuality(itemCopy)
+      if (sellIn < 6) itemCopy.quality = incrementQuality(itemCopy)
+      return itemCopy.quality
+    }
+    default: return decrementQuality({ quality })
+  }
+}
+
+function updateItemSellIn({ name, sellIn }: Readonly<Item>) {
+  switch (name) {
+    case 'Sulfuras, Hand of Ragnaros': return sellIn
+    default: return sellIn - 1
+  }
+}
+
+function updateExpiredItemQuality({ quality, name, sellIn }: Readonly<Item>): number {
+  const isExpired = sellIn < 0
+  if (!isExpired) return quality
+
+  switch (name) {
+    case 'Sulfuras, Hand of Ragnaros': return quality
+    case 'Aged Brie': return incrementQuality({ quality })
+    case 'Backstage passes to a TAFKAL80ETC concert': return 0
+    default: return decrementQuality({ quality })
+  }
+}
+
+function decrementQuality({ quality }: Readonly<Pick<Item, 'quality'>>): number {
+  if (quality < 1) return quality
+  return quality - 1
+}
+
+function incrementQuality({ quality }: Readonly<Pick<Item, 'quality'>>): number {
+  if (quality >= 50) return quality
+  return quality + 1
+}
+
+function isConjured(item: Readonly<Item | ConjuredItem>): boolean {
+  return 'conjured' in item && item['conjured'] === true
+}
+
+function updateConjuredItemQuality(
+  previousItem: Readonly<Item>,
+  currentItem: Readonly<Item | ConjuredItem>
+): number {
+  if (!isConjured(currentItem)) return currentItem.quality
+  const diff = previousItem.quality - currentItem.quality
+  if (diff >= 0) return currentItem.quality
+
+  return previousItem.quality - (diff * 2)
 }
